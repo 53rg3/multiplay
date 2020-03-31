@@ -200,6 +200,7 @@ lazy val `functest` = (project in file("functest"))
   -Dlogback.configurationFile=/path/to/config.xml
   ```
 
+  If all your services use the same logger configuration, then you can simply put it into the commons project and this problem doesn't arise in the first place.
 
 
 
