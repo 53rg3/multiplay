@@ -94,27 +94,6 @@ val junit = "junit" % "junit" % "4.12" % Test
 
 
 
-## How to use code in the root project (e.g. for tests)?
-
-You need to define the root project as its own project in its  `build.sbt`:
-
-```scala
-lazy val root = project.in(file("."))
-  .settings(
-    libraryDependencies ++= Seq(
-      junit
-    )
-  )
-  .dependsOn(serviceOne, serviceTwo, commons)
-  .aggregate(serviceOne, serviceTwo, commons)
-```
-
-All classes from the projects in `.dependsOn()` are then available in the root project. 
-
-Not sure if useful... or maybe not. We could create our own [ApplicationLoaders](https://www.playframework.com/documentation/2.8.x/JavaDependencyInjection#Advanced:-Extending-the-GuiceApplicationLoader) and run actual unit tests with multiple services running at once. Maybe.
-
-
-
 ## How to use Guice?
 
 Works as usual. You can put interfaces into the commons project, implement them in a service project and autowire it via Guice. See `ServiceOneController.java`
@@ -139,7 +118,94 @@ Or as single line:
 
 
 
+## Testing
+
+Docs: 
+
+- [How to configure an application for testing (via Guice)?](https://www.playframework.com/documentation/latest/JavaTestingWithGuice)
+
+- [How to do functional testing (fake server, etc)?](https://www.playframework.com/documentation/latest/JavaFunctionalTest)
+
+
+### Fake Server
+
+In your tests you can create one or multiple fake servers, i.e. a actual servers to which you can send standard HTTP requests. Either by using `TestServer`, e.g.
+
+```java
+TestServer testServer = new TestServer(9000, Helpers.fakeApplication());
+testServer.start();
+// ... or this:
+TestServer testServer = Helpers.testServer(9000, Helpers.fakeApplication());
+```
+
+Or via  `extends WithServer` which is simply a wrapper around `TestServer`. You might want to  `@Override`  the methods `int providePort()` and `Application provideApplication()`. Note that  `startServer()` uses `@Before`, i.e. it will start the server automatically in tests before running tests.
+
+If you to use multiple servers, create a factory, e.g:
+
+```java
+public class FakeServiceOneFactory {
+    public static TestServer defaults(final int port) {
+        TestServer testServer = Helpers.testServer(port, Helpers.fakeApplication());
+        return Helpers.testServer(port, Helpers.fakeApplication());
+    }
+
+    public static TestServer configured(final int port, final Application application){
+        return Helpers.testServer(port, application);
+    }
+}
+```
+
+**Notes**
+
+- If you use multiple servers then static variables have the same memory reference (i.e. are equal), because Guice wires them together from the same classes (duh...)
+
+
+### Functional testing with multiple projects at once
+
+With some [sbt magic](https://www.scala-sbt.org/release/docs/Multi-Project.html#Per-configuration+classpath+dependencies) we can create a sub-project solely for testing which depends on multiple microservices and has access to all classes, including classes in `test/`. So you can simulate a whole network of microservices from code. 
+
+```scala
+lazy val `functest` = (project in file("functest"))
+  .settings(
+    name := "functest",
+    version := "0.1",
+    libraryDependencies ++= Seq(
+      junit,
+    )
+  )
+  .dependsOn(
+    serviceOne % "compile->compile;test->test",
+    serviceTwo % "compile->compile;test->test",
+    commons % "compile->compile;test->test"
+  )
+```
+
+**Notes**
+
+- If you try to create different configurations from that testing project, then you might run into dependency problems due to naming collisions in the classpath, because the classes are somehow all thrown together into their respective packages with no unique identifier. E.g. if your serviceOne and serviceTwo both have class in `src/main/java/utils/Utils.java` then, in the testing project, both are accessible via `import utils.Utils`. Everything compiles just fine but the import points to the last project defined in `build.sbt` which uses this classpath, i.e. in the example above the Utils from serviceTwo would win.
+
+  - Probably best way is to preconfigure everything in the respective project, so that you can simply do this: 
+
+    ```java
+    new FakeFullyConnfiguredServiceOne().run()
+    ```
+
+  - You could also encapsulate all project classes in a unique package. E.g. 
+    `src/main/java/utils/Utils.java` to `src/main/java/serviceone/utils/Utils.java`
+    Then it would be imported via `import serviceone.utils.Utils`
+
+- Logback also complains when it multiple projects are thrown together: `Resource [logback.xml] occurs multiple times on the classpath`. You could run with the following (see [docs](http://logback.qos.ch/manual/configuration.html)): 
+
+  ```
+  -Dlogback.configurationFile=/path/to/config.xml
+  ```
+
+
+
+
 ## Other Nice2Knows
+
+- When you define a new sub-project in the `build.sbt` and reimport, then it creates the needed folders. You just need to create the `src/` manually. So no need to use IntelliJ for scaffolding. IntelliJ project configuration (i.e. what the sources, resources, tests folder are) is also automatically set by sbt.
 
 - To make a sbt project available in another sbt project you must include it in `.dependsOn(SOME_SBT_PROJECT)` of the project specification where you want to use it. You can even make a Play project depend on another project. But maybe there will be problems with build size or spaghetti code?
 
@@ -161,3 +227,4 @@ We can run tests in a single project from the IDE as usual, but running all test
 
 - Probably solvable via sbt Tasks, see [docs](https://www.scala-sbt.org/1.x/docs/Tasks.html) and [this example](https://stackoverflow.com/a/22321779/4179212).
 - You could technically also use Junit suites and call them from the root project tests, see "How to use code in the root project (e.g. for tests)?". But that's probably a shitty solution since you need to manually make sure that every single test is included.
+
