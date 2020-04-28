@@ -204,6 +204,17 @@ lazy val `functest` = (project in file("functest"))
 
 
 
+## Encountered Problems
+
+### Routes files get confused
+
+- There was a problem when running tests for multiple services at once. Somehow the routes file of one service was used as routes for another service throwing the "Action not found" error (which shows the "tried routes"). Both fake servers for the services were set up in their retrospective and that technically shouldn't have occurred? Problem was resolved by running each service as sbt project (which applies some black magic no one knows about).
+- If that happens again you can try to give unique names to the route files. E.g. `play.http.router=hello.Routes` in `application.conf`. See [here](https://stackoverflow.com/questions/33627062/using-play-2-4-with-a-renamed-conf-routes-file).
+
+
+
+
+
 ## Other Nice2Knows
 
 - When you define a new sub-project in the `build.sbt` and reimport, then it creates the needed folders. You just need to create the `src/` manually. So no need to use IntelliJ for scaffolding. IntelliJ project configuration (i.e. what the sources, resources, tests folder are) is also automatically set by sbt.
@@ -218,7 +229,7 @@ lazy val `functest` = (project in file("functest"))
   scalaVersion in ThisBuild := "2.13.1"
   ```
 
-
+- To use Akka TYPED, inject the ActorSystem, spawn typed guardian actor via Adapter.spawn(), see [here](https://www.playframework.com/documentation/2.8.x/AkkaTyped#Compile-time-dependency-injection).
 
 ## Todo
 
