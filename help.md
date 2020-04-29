@@ -161,7 +161,7 @@ public class FakeServiceOneFactory {
 
 ### ~~Functional testing with multiple projects at once~~
 
-**Shit doesn't work.**
+**Shit doesn't work. Sbt loads only 1 implementation and uses that for all services. You can run only 1 implementation at once. But at least you can run multiple instances of it.**
 
 ~~With some [sbt magic](https://www.scala-sbt.org/release/docs/Multi-Project.html#Per-configuration+classpath+dependencies) we can create a sub-project solely for testing which depends on multiple microservices and has access to all classes, including classes in `test/`. So you can simulate a whole network of microservices from code.~~ 
 
