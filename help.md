@@ -159,10 +159,11 @@ public class FakeServiceOneFactory {
 
 - If you use multiple servers then static variables have the same memory reference (i.e. are equal), because Guice wires them together from the same classes (duh...)
 
+### ~~Functional testing with multiple projects at once~~
 
-### Functional testing with multiple projects at once
+**Shit doesn't work.**
 
-With some [sbt magic](https://www.scala-sbt.org/release/docs/Multi-Project.html#Per-configuration+classpath+dependencies) we can create a sub-project solely for testing which depends on multiple microservices and has access to all classes, including classes in `test/`. So you can simulate a whole network of microservices from code. 
+~~With some [sbt magic](https://www.scala-sbt.org/release/docs/Multi-Project.html#Per-configuration+classpath+dependencies) we can create a sub-project solely for testing which depends on multiple microservices and has access to all classes, including classes in `test/`. So you can simulate a whole network of microservices from code.~~ 
 
 ```scala
 lazy val `functest` = (project in file("functest"))
@@ -180,19 +181,19 @@ lazy val `functest` = (project in file("functest"))
   )
 ```
 
-**Notes**
+~~**Notes**~~
 
-- If you try to create different configurations from that testing project, then you might run into dependency problems due to naming collisions in the classpath, because the classes are somehow all thrown together into their respective packages with no unique identifier. E.g. if your serviceOne and serviceTwo both have class in `src/main/java/utils/Utils.java` then, in the testing project, both are accessible via `import utils.Utils`. Everything compiles just fine but the import points to the last project defined in `build.sbt` which uses this classpath, i.e. in the example above the Utils from serviceTwo would win.
+- ~~If you try to create different configurations from that testing project, then you might run into dependency problems due to naming collisions in the classpath, because the classes are somehow all thrown together into their respective packages with no unique identifier. E.g. if your serviceOne and serviceTwo both have class in `src/main/java/utils/Utils.java` then, in the testing project, both are accessible via `import utils.Utils`. Everything compiles just fine but the import points to the last project defined in `build.sbt` which uses this classpath, i.e. in the example above the Utils from serviceTwo would win.~~
 
-  - Probably best way is to preconfigure everything in the respective project, so that you can simply do this: 
+  - ~~Probably best way is to preconfigure everything in the respective project, so that you can simply do this:~~ 
 
     ```java
     new FakeFullyConnfiguredServiceOne().run()
     ```
 
-  - You could also encapsulate all project classes in a unique package. E.g. 
-    `src/main/java/utils/Utils.java` to `src/main/java/serviceone/utils/Utils.java`
-    Then it would be imported via `import serviceone.utils.Utils`
+  - ~~You could also encapsulate all project classes in a unique package. E.g.~~ 
+    ~~`src/main/java/utils/Utils.java` to `src/main/java/serviceone/utils/Utils.java`~~
+    ~~Then it would be imported via `import serviceone.utils.Utils`~~
 
 - Logback also complains when it multiple projects are thrown together: `Resource [logback.xml] occurs multiple times on the classpath`. You could run with the following (see [docs](http://logback.qos.ch/manual/configuration.html)): 
 
@@ -200,16 +201,12 @@ lazy val `functest` = (project in file("functest"))
   -Dlogback.configurationFile=/path/to/config.xml
   ```
 
-  If all your services use the same logger configuration, then you can simply put it into the commons project and this problem doesn't arise in the first place.
+  ~~If all your services use the same logger configuration, then you can simply put it into the commons project and this problem doesn't arise in the first place.~~
 
+~~**Routes files get confused**~~
 
-
-## Encountered Problems
-
-### Routes files get confused
-
-- There was a problem when running tests for multiple services at once. Somehow the routes file of one service was used as routes for another service throwing the "Action not found" error (which shows the "tried routes"). Both fake servers for the services were set up in their retrospective and that technically shouldn't have occurred? Problem was resolved by running each service as sbt project (which applies some black magic no one knows about).
-- If that happens again you can try to give unique names to the route files. E.g. `play.http.router=hello.Routes` in `application.conf`. See [here](https://stackoverflow.com/questions/33627062/using-play-2-4-with-a-renamed-conf-routes-file).
+- ~~There was a problem when running tests for multiple services at once. Somehow the routes file of one service was used as routes for another service throwing the "Action not found" error (which shows the "tried routes"). Both fake servers for the services were set up in their retrospective and that technically shouldn't have occurred? Problem was resolved by running each service as sbt project (which applies some black magic no one knows about).~~
+- ~~If that happens again you can try to give unique names to the route files. E.g. `play.http.router=hello.Routes` in `application.conf`. See [here](https://stackoverflow.com/questions/33627062/using-play-2-4-with-a-renamed-conf-routes-file).~~
 
 
 
